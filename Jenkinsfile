@@ -256,5 +256,3 @@ pipeline {
  //         sh 'exit 0'
  //     }
  //   }
-
-  }
