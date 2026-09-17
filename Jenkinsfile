@@ -42,14 +42,14 @@ List<Map> getFailedStages( RunWrapper build ) {
 pipeline {
   agent any
 
-  environment {
-    deploymentName = "devsecops"
-    containerName = "devsecops-container"
-    serviceName = "devsecops-svc"
-    imageName = "siddharth67/numeric-app:${GIT_COMMIT}"
-    applicationURL="http://devsecops-demo.eastus.cloudapp.azure.com"
-    applicationURI="/increment/99"
-  }
+  //environment {
+    //deploymentName = "devsecops"
+    //containerName = "devsecops-container"
+    //serviceName = "devsecops-svc"
+    //imageName = "siddharth67/numeric-app:${GIT_COMMIT}"
+    //applicationURL="http://devsecops-demo.eastus.cloudapp.azure.com"
+    //applicationURI="/increment/99"
+  //}
 
   stages {
 
@@ -64,6 +64,14 @@ pipeline {
        steps {
          sh "mvn test"
        }
+		post {
+          always {
+              // Publish JUnit results
+              junit 'target/surefire-reports/*.xml'
+              // Publish JaCoCo coverage
+              jacoco execPattern: 'target/jacoco.exec'
+           }
+         }
      }
 
  //    stage('Mutation Tests - PIT') {
