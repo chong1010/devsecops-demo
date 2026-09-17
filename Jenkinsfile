@@ -65,13 +65,15 @@ pipeline {
          sh "mvn test"
        }
 		post {
-          always {
-              // Publish JUnit results
-              junit 'target/surefire-reports/*.xml'
-              // Publish JaCoCo coverage
-              jacoco execPattern: 'target/jacoco.exec'
-           }
-         }
+		  always {
+		  // Publish JUnit results
+		  junit 'target/surefire-reports/*.xml'
+		  // Publish JaCoCo coverage
+		  jacoco execPattern: 'target/jacoco.exec', 
+		         classPattern: 'target/classes', 
+		         sourcePattern: 'src/main/java'
+	      }
+		}
      }
 
  //    stage('Mutation Tests - PIT') {
