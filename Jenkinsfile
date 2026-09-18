@@ -78,8 +78,10 @@ pipeline {
 	 stage('Docker Build and Push') {
             steps {
                 withDockerRegistry(credentialsId: 'docker-hub', url: '') {
-                    sh 'docker build -t chongchang/numeric-app:"$GIT_COMMIT" .'
-                    sh 'docker push chongchang/numeric-app:"$GIT_COMMIT"'
+                    sh '''
+                        docker build -t chongchang/numeric-app:${GIT_COMMIT} .
+                        docker push chongchang/numeric-app:${GIT_COMMIT}
+                    '''
                 }
             }
         }
