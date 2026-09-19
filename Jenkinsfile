@@ -79,7 +79,7 @@ pipeline {
 	  stage('SAST') {
         steps {
 			withSonarQubeEnv('SonarQube') {
-          sh "mvn clean verify org.sonarsource.scanner.maven:sonar-maven-plugin:sonar -Dsonar.projectKey=numeric-application -Dsonar.projectName='numeric-application' -Dsonar.host.url=http://192.168.1.166:9000 -Dsonar.token=sqp_700fbf75b95967a89eb4c68ac9e07284ecd690c2"
+          sh "mvn clean verify org.sonarsource.scanner.maven:sonar-maven-plugin:sonar -Dsonar.projectKey=numeric-application -Dsonar.projectName='numeric-application' -Dsonar.host.url=http://192.168.1.166:9000"
 		  }
 		  timeout(time: 2, unit: 'MINUTES') {
 			  script{
