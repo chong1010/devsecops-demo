@@ -75,6 +75,13 @@ pipeline {
 	      }
 		} 
      }
+
+	  stage('SAST') {
+        steps {
+          sh "mvn clean verify org.sonarsource.scanner.maven:sonar-maven-plugin:sonar-Dsonar.projectKey=numeric-application -Dsonar.projectName='numeric-application' -Dsonar.host.url=http://192.168.1.166:9000 -Dsonar.token=sqp_700fbf75b95967a89eb4c68ac9e07284ecd690c2"
+       }
+     }
+	  
 	 stage('Docker Build and Push') {
             steps {
                 withDockerRegistry(credentialsId: 'docker-hub', url: '') {
