@@ -93,7 +93,7 @@ pipeline {
 
 	 stage('Vulnerability Scan') {
        steps {
-          sh 'mvn dependency-check:check -DnvdApiKey="${NVD_API_KEY}"'
+          sh "mvn dependency-check:check -DnvdApiKey="${NVD_API_KEY}""
          }
        post {
           always {
