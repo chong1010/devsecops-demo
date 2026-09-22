@@ -91,7 +91,7 @@ pipeline {
 
 	 stage('Vulnerability Scan') {
        steps {
-          sh 'mvn dependency-check:check'
+          sh 'mvn dependency-check:check -DnvdApiKey="88C6394E-D9C0-4098-835B-0E0F6A9F2FD6"'
          }
        post {
           always {
