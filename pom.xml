@@ -120,7 +120,7 @@
 				<version>10.0.4</version>
 				<configuration>
 					<format>ALL</format>
-					<failBuildOnCVSS>8</failBuildOnCVSS>
+					<failBuildOnCVSS>4</failBuildOnCVSS>
 				</configuration>
 			</plugin>
 
