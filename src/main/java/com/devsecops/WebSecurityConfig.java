@@ -13,10 +13,9 @@ import org.springframework.security.web.SecurityFilterChain;
 public class WebSecurityConfig {
 
     @Bean
+    @SuppressWarnings("java:S4502") // Suppress SonarQube CSRF Security Hotspot for stateless API
     public SecurityFilterChain filterChain(HttpSecurity http) throws Exception {
         http
-            // CSRF protection is disabled because this service is a stateless REST API 
-            // that does not rely on browser session cookies.
             .csrf(AbstractHttpConfigurer::disable)
             .sessionManagement(session -> session
                 .sessionCreationPolicy(SessionCreationPolicy.STATELESS)
