@@ -41,9 +41,7 @@ List<Map> getFailedStages( RunWrapper build ) {
 
 pipeline {
   agent any
-    environment {
-        NVD_API_KEY = credentials('nvd-api-key-credential-id')
-    }
+    
   //environment {
     //deploymentName = "devsecops"
     //containerName = "devsecops-container"
@@ -93,13 +91,13 @@ pipeline {
 
 	 stage('Vulnerability Scan') {
        steps {
-          sh """
-            mvn dependency-check:check -DnvdApiKey="${NVD_API_KEY}"
-          """
+             withCredentials([string(credentialsId: 'nvd-api-key-credential-id', variable: 'NVD_API_KEY')]) {
+                 sh 'mvn dependency-check:check -DnvdApiKey="${NVD_API_KEY}"'
+             }
          }
        post {
           always {
-           dependencyCheckPublisher pattern: 'target/dependency-check-report.xml'
+            dependencyCheckPublisher pattern: 'target/dependency-check-report.xml'
         }
       }
     }
