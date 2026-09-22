@@ -37,9 +37,8 @@ class NumericApplicationTests {
 
     @Test
     void compareToFiftyTestLesserOrEqual() throws Exception {
-        // Tests the 'else' branch when input is less than or equal to 50
         this.mockMvc.perform(get("/compare/10"))
                 .andExpect(status().isOk())
-                .andExpect(content().string("Smaller or equal to 50"));
+                .andExpect(content().string("Smaller than or equal to 50")); // Added "than"
     }
 }
