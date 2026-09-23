@@ -1,21 +1,24 @@
 #!/bin/bash
-IMAGE_NAME=$1
 
-if [ -z "$IMAGE_NAME" ]; then
+# Use argument $1 if provided; otherwise, fallback to Jenkins environment variables
+IMAGE_TO_SCAN="${1:-${IMAGE_NAME}:${IMAGE_TAG}}"
+
+if [ -z "$IMAGE_TO_SCAN" ] || [ "$IMAGE_TO_SCAN" == ":" ]; then
     echo "Error: No Docker image name provided."
     echo "Usage: bash trivy-docker-image-scan.sh <image_name:tag>"
     exit 1
 fi
 
-echo "Scanning built Docker image: ${IMAGE_NAME}"
+echo "Scanning built Docker image: ${IMAGE_TO_SCAN}"
 
-# Run Trivy v0.74.0 scanning for CRITICAL vulnerabilities
+# Run Trivy with Docker socket mounted so it can inspect local images
 docker run --rm \
+  -v /var/run/docker.sock:/var/run/docker.sock \
   -v $WORKSPACE:/root/.cache/ \
   aquasec/trivy:0.74.0 -q image \
   --exit-code 1 \
   --severity CRITICAL \
-  "${IMAGE_NAME}"
+  "${IMAGE_TO_SCAN}"
 
 exit_code=$?
 
