@@ -23,9 +23,9 @@
 		<maven.compiler.target>17</maven.compiler.target>
 		<maven.compiler.release>17</maven.compiler.release>
 
-		<!-- OVERRIDE TO SPECIFIC FIXED VERSIONS -->
-		<tomcat.version>10.1.55</tomcat.version>
-		<spring-security.version>6.4.6</spring-security.version>
+		<!-- OVERRIDE TO PATCHED AND AVAILABLE VERSIONS -->
+		<tomcat.version>10.1.59</tomcat.version>
+		<spring-security.version>6.5.9</spring-security.version>
 	</properties>
 	
 	<dependencies>
