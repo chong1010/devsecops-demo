@@ -40,84 +40,102 @@ List<Map> getFailedStages( RunWrapper build ) {
 /////// ******************************* Code for fectching Failed Stage Name ******************************* ///////
 
 pipeline {
-  agent any
-    
-  //environment {
-    //deploymentName = "devsecops"
-    //containerName = "devsecops-container"
-    //serviceName = "devsecops-svc"
-    //imageName = "siddharth67/numeric-app:${GIT_COMMIT}"
-    //applicationURL="http://devsecops-demo.eastus.cloudapp.azure.com"
-    //applicationURI="/increment/99"
-  //}
+    agent any
 
-  stages {
-
-     stage('Build Artifact - Maven') {
-       steps {
-         sh "mvn clean package -DskipTests=true"
-         archive 'target/*.jar'
-       }
-     }
-
-     stage('Unit Tests - JUnit and JaCoCo') {
-       steps {
-         sh 'mvn test'
-       }
-		post {
-		  always {
-		  // Publish JUnit results
-		  junit 'target/surefire-reports/*.xml'
-		  // Publish JaCoCo coverage
-		  jacoco execPattern: 'target/jacoco.exec', 
-		         classPattern: 'target/classes', 
-		         sourcePattern: 'src/main/java'
-	      }
-		} 
-     }
-
-	  stage('SAST') {
-        steps {
-			withSonarQubeEnv('SonarQube') {
-          sh "mvn clean verify org.sonarsource.scanner.maven:sonar-maven-plugin:sonar -Dsonar.projectKey=numeric-application -Dsonar.projectName='numeric-application' -Dsonar.host.url=http://192.168.1.166:9000"
-		  }
-		  timeout(time: 2, unit: 'MINUTES') {
-			  script{
-				waitForQualityGate abortPipeline: true
-			  }
-		   }
-       }
-     }
-
-	 stage('Vulnerability Scan') {
-       steps {
-             withCredentials([string(credentialsId: 'nvd-api-key-credential-id', variable: 'NVD_API_KEY')]) {
-                 sh 'mvn dependency-check:check -DnvdApiKey="${NVD_API_KEY}"'
-             }
-         }
-       post {
-          always {
-            dependencyCheckPublisher pattern: 'target/dependency-check-report.xml'
-        }
-      }
+    environment {
+        // Centralized pipeline variables
+        IMAGE_NAME   = "chongchang/numeric-app"
+        IMAGE_TAG    = "${GIT_COMMIT}"
+        SONAR_KEY    = "numeric-application"
+        SONAR_NAME   = "numeric-application"
+        K8S_MANIFEST = "k8s_deployment_service.yaml"
     }
-	 stage('Docker Build and Push') {
+
+    stages {
+
+        stage('Build Artifact - Maven') {
             steps {
-                withDockerRegistry(credentialsId: 'docker-hub', url: '') {
-                    sh '''
-                        docker build -t chongchang/numeric-app:${GIT_COMMIT} .
-                        docker push chongchang/numeric-app:${GIT_COMMIT}
-                    '''
+                sh 'mvn clean package -DskipTests=true'
+                archiveArtifacts artifacts: 'target/*.jar', allowEmptyArchive: false
+            }
+        }
+
+        stage('Unit Tests - JUnit and JaCoCo') {
+            steps {
+                sh 'mvn test'
+            }
+            post {
+                always {
+                    // Publish JUnit and JaCoCo coverage reports
+                    junit 'target/surefire-reports/*.xml'
+                    jacoco execPattern: 'target/jacoco.exec', 
+                           classPattern: 'target/classes', 
+                           sourcePattern: 'src/main/java'
                 }
             }
         }
-	  stage('Kubernetes Deployment - DEV') {
-      steps {
-        withKubeConfig([credentialsId: 'kubeconfig']) {
-          sh 'sed -i "s#replace#chongchang/numeric-app:${GIT_COMMIT}#g" k8s_deployment_service.yaml'
-          sh 'kubectl apply -f k8s_deployment_service.yaml'
+
+        stage('SAST - SonarQube') {
+            steps {
+                withSonarQubeEnv('SonarQube') {
+                    sh """
+                        mvn verify org.sonarsource.scanner.maven:sonar-maven-plugin:sonar \
+                        -Dsonar.projectKey=${SONAR_KEY} \
+                        -Dsonar.projectName='${SONAR_NAME}'
+                    """
+                }
+                timeout(time: 2, unit: 'MINUTES') {
+                    script {
+                        waitForQualityGate abortPipeline: true
+                    }
+                }
+            }
         }
-      }
+
+        stage('Vulnerability Scan - Dependency Check') {
+            steps {
+                withCredentials([string(credentialsId: 'nvd-api-key-credential-id', variable: 'NVD_API_KEY')]) {
+                    sh 'mvn dependency-check:check -DnvdApiKey="${NVD_API_KEY}"'
+                }
+            }
+            post {
+                always {
+                    dependencyCheckPublisher pattern: 'target/dependency-check-report.xml'
+                }
+            }
+        }
+
+        stage('Docker Build and Push') {
+            steps {
+                withDockerRegistry(credentialsId: 'docker-hub', url: '') {
+                    sh """
+                        docker build -t ${IMAGE_NAME}:${IMAGE_TAG} .
+                        docker push ${IMAGE_NAME}:${IMAGE_TAG}
+                    """
+                }
+            }
+        }
+
+        stage('Kubernetes Deployment - DEV') {
+            steps {
+                withKubeConfig([credentialsId: 'kubeconfig']) {
+                    // Update manifest image tag dynamically and deploy
+                    sh """
+                        sed -i "s#replace#${IMAGE_NAME}:${IMAGE_TAG}#g" ${K8S_MANIFEST}
+                        kubectl apply -f ${K8S_MANIFEST}
+                    """
+                }
+            }
+        }
     }
-  }
+
+    post {
+        always {
+            // Clean local Docker image to prevent disk space issues on Vagrant VM
+            sh "docker rmi ${IMAGE_NAME}:${IMAGE_TAG} || true"
+            // Clean workspace build directory
+            cleanWs()
+        }
+    }
+}
 }
