@@ -126,6 +126,15 @@ pipeline {
             }
         }
 
+        stage('Kubernetes Policy Scan') {
+            steps {
+                sh '''
+                    docker run --rm -v "${WORKSPACE}":/project \
+                      openpolicyagent/conftest test \
+                      --policy opa-k8s-security.rego k8s_deployment_service.yaml
+                '''
+            }
+        }
         // PUSH ONLY AFTER TRIVY AND DEPENDENCY SCAN PASS
         stage('Docker Push') {
             steps {
