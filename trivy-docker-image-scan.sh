@@ -13,12 +13,16 @@ echo "Scanning built Docker image: ${IMAGE_TO_SCAN}"
 
 # Use WORKSPACE if defined (Jenkins), otherwise fallback to vagrant shared folder cache
 CACHE_DIR="${WORKSPACE:-/vagrant/.cache/trivy}"
+TEMP_DIR="${WORKSPACE:-/vagrant}/tmp"
 mkdir -p "${CACHE_DIR}"
+mkdir -p "${TEMP_DIR}"
 
-# Run Trivy with Docker socket mounted and cache directed to a high-capacity directory
+# Run Trivy with mounted cache AND custom temp dir pointing to high-capacity storage
 docker run --rm \
   -v /var/run/docker.sock:/var/run/docker.sock \
   -v "${CACHE_DIR}:/root/.cache/" \
+  -v "${TEMP_DIR}:/tmp" \
+  -e TRIVY_TEMP_DIR="/tmp" \
   aquasec/trivy:0.74.0 -q image \
   --exit-code 1 \
   --severity CRITICAL \
