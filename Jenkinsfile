@@ -92,6 +92,13 @@ pipeline {
             }
         }
 
+        // MUST BUILD IMAGE BEFORE TRIVY SCAN
+        stage('Docker Build') {
+            steps {
+                sh "docker build -t ${IMAGE_NAME}:${IMAGE_TAG} ."
+            }
+        }
+
         stage('Vulnerability Scan - Docker') {
             steps {
                 parallel(
@@ -112,13 +119,11 @@ pipeline {
             }
         }
 
-        stage('Docker Build and Push') {
+        // PUSH ONLY AFTER TRIVY AND DEPENDENCY SCAN PASS
+        stage('Docker Push') {
             steps {
                 withDockerRegistry(credentialsId: 'docker-hub', url: '') {
-                    sh """
-                        docker build -t ${IMAGE_NAME}:${IMAGE_TAG} .
-                        docker push ${IMAGE_NAME}:${IMAGE_TAG}
-                    """
+                    sh "docker push ${IMAGE_NAME}:${IMAGE_TAG}"
                 }
             }
         }
