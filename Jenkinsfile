@@ -92,11 +92,18 @@ pipeline {
             }
         }
 
-        stage('Vulnerability Scan - Dependency Check') {
+        stage('Vulnerability Scan - Docker') {
             steps {
-                withCredentials([string(credentialsId: 'nvd-api-key-credential-id', variable: 'NVD_API_KEY')]) {
-                    sh 'mvn dependency-check:check -DnvdApiKey="${NVD_API_KEY}"'
-                }
+                parallel(
+                    'Dependency Scan': {
+                        withCredentials([string(credentialsId: 'nvd-api-key-credential-id', variable: 'NVD_API_KEY')]) {
+                            sh 'mvn dependency-check:check -DnvdApiKey="${NVD_API_KEY}"'
+                        }
+                    },
+                    'Trivy Scan': {
+                        sh "bash trivy-docker-image-scan.sh"
+                    }
+                )
             }
             post {
                 always {
