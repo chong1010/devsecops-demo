@@ -109,6 +109,13 @@ pipeline {
                     },
                     'Trivy Scan': {
                         sh "bash trivy-docker-image-scan.sh ${IMAGE_NAME}:${IMAGE_TAG}"
+                    },
+                    'OPA Conftest Scan': {
+                        sh '''
+                            docker run --rm -v "${WORKSPACE}":/project \
+                              openpolicyagent/conftest test \
+                              --policy opa-docker-security.rego Dockerfile
+                        '''
                     }
                 )
             }
