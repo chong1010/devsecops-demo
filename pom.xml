@@ -15,13 +15,17 @@
 	<name>numeric</name>
 	<description>Demo for DevSecOps</description>
 
-	<properties>
+    <properties>
 		<project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
 		<project.reporting.outputEncoding>UTF-8</project.reporting.outputEncoding>
 		<java.version>17</java.version>
 		<maven.compiler.source>17</maven.compiler.source>
 		<maven.compiler.target>17</maven.compiler.target>
 		<maven.compiler.release>17</maven.compiler.release>
+
+		<!-- OVERRIDE TRANSITIVE VULNERABLE DEPENDENCIES -->
+		<tomcat.version>10.1.58</tomcat.version>
+		<spring-security.version>6.4.14</spring-security.version>
 	</properties>
 	
 	<dependencies>
