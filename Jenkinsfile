@@ -146,22 +146,13 @@ pipeline {
 
         stage('Kubernetes Deployment - DEV') {
             steps {
-                parallel(
-                    Deployment: {
-                        withKubeConfig([credentialsId: 'kubeconfig']) {
-                            // Update manifest image tag dynamically and deploy
-                            sh """
-                                sed -i "s#replace#${IMAGE_NAME}:${IMAGE_TAG}#g" ${K8S_MANIFEST}
-                                kubectl apply -f ${K8S_MANIFEST}
-                            """
-                        }
-                    },
-                    Rollout_Status: {
-                        withKubeConfig([credentialsId: 'kubeconfig']) {
+                withKubeConfig([credentialsId: 'kubeconfig']) {
+                    // Step 1: Deploy
+                    sh "sed 's#replace#${IMAGE_NAME}:${IMAGE_TAG}#g' ${K8S_MANIFEST} | kubectl apply -f -"
+
+                    // Step 2: Rollout Status Check (This runs your rollout monitor script)
                     sh 'bash k8s-deployment-rollout-status.sh'
-                        }
-                    }
-                )
+                }
             }
         }
     post {
@@ -172,5 +163,4 @@ pipeline {
             cleanWs()
         }
     }
-}
 }
