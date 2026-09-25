@@ -127,23 +127,20 @@ pipeline {
             }
         }
 
-        stage('Kubernetes Policy Scan') {
+        stage('Kubernetes Security Scans') {
             steps {
-                sh '''
-                    docker run --rm -v "${WORKSPACE}":/project \
-                      openpolicyagent/conftest test \
-                      --policy opa-k8s-security.rego k8s_deployment_service.yaml
-                '''
-            }
-        }
-        // Kubesec Static Manifest Scan via API
-        stage('Kubesec Scan') {
-            steps {
-                sh """
-                    curl -sSX POST \
-                      --data-binary @"${K8S_MANIFEST}" \
-                      https://v2.kubesec.io/scan
-                """
+                parallel(
+                    'OPA Conftest Scan': {
+                        sh '''
+                            docker run --rm -v "${WORKSPACE}":/project \
+                              openpolicyagent/conftest test \
+                              --policy opa-k8s-security.rego k8s_deployment_service.yaml
+                        '''
+                    },
+                    'Kubesec Scan': {
+                        sh 'bash kubesec-scan.sh'
+                    }
+                )
             }
         }
 

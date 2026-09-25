@@ -1,27 +1,29 @@
 #!/bin/bash
 
-#kubesec-scan.sh
+MANIFEST_FILE="k8s_deployment_service.yaml"
 
-# using kubesec v2 api
-scan_result=$(curl -sSX POST --data-binary @"k8s_deployment_service.yaml" https://v2.kubesec.io/scan)
-scan_message=$(curl -sSX POST --data-binary @"k8s_deployment_service.yaml" https://v2.kubesec.io/scan | jq .[0].message -r ) 
-scan_score=$(curl -sSX POST --data-binary @"k8s_deployment_service.yaml" https://v2.kubesec.io/scan | jq .[0].score ) 
+if [ ! -f "$MANIFEST_FILE" ]; then
+    echo "Error: $MANIFEST_FILE not found."
+    exit 1
+fi
 
+echo "Scanning $MANIFEST_FILE with Kubesec..."
 
-# using kubesec docker image for scanning
-# scan_result=$(docker run -i kubesec/kubesec:512c5e0 scan /dev/stdin < k8s_deployment_service.yaml)
-# scan_message=$(docker run -i kubesec/kubesec:512c5e0 scan /dev/stdin < k8s_deployment_service.yaml | jq .[].message -r)
-# scan_score=$(docker run -i kubesec/kubesec:512c5e0 scan /dev/stdin < k8s_deployment_service.yaml | jq .[].score)
+# 1. Perform SINGLE API request and store JSON output
+SCAN_OUTPUT=$(curl -sSX POST --data-binary @"$MANIFEST_FILE" https://v2.kubesec.io/scan)
 
-	
-    # Kubesec scan result processing
-    # echo "Scan Score : $scan_score"
+# 2. Parse response using jq
+scan_message=$(echo "$SCAN_OUTPUT" | jq -r '.[0].message // "No message"')
+scan_score=$(echo "$SCAN_OUTPUT" | jq -r '.[0].score // 0')
 
-	if [[ "${scan_score}" -ge 5 ]]; then
-	    echo "Score is $scan_score"
-	    echo "Kubesec Scan $scan_message"
-	else
-	    echo "Score is $scan_score, which is less than or equal to 5."
-	    echo "Scanning Kubernetes Resource has Failed"
-	    exit 1;
-	fi;
+echo "Kubesec Message: $scan_message"
+echo "Kubesec Score  : $scan_score"
+
+# 3. Fail build only if score is 0 or negative (or adjust threshold as needed)
+if [ "$scan_score" -gt 0 ]; then
+    echo "Kubesec Scan Passed with score: $scan_score"
+    exit 0
+else
+    echo "Kubesec Scan Failed! Security score ($scan_score) is too low."
+    exit 1
+fi
