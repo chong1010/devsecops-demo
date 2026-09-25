@@ -155,6 +155,8 @@ pipeline {
                 }
             }
         }
+    }
+    
     post {
         always {
             // Clean local Docker image to prevent disk space issues on Vagrant VM
