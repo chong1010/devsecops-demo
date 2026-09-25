@@ -136,6 +136,17 @@ pipeline {
                 '''
             }
         }
+        // Kubesec Static Manifest Scan via API
+        stage('Kubesec Scan') {
+            steps {
+                sh """
+                    curl -sSX POST \
+                      --data-binary @"${K8S_MANIFEST}" \
+                      https://v2.kubesec.io/scan
+                """
+            }
+        }
+
         // PUSH ONLY AFTER TRIVY AND DEPENDENCY SCAN PASS
         stage('Docker Push') {
             steps {
