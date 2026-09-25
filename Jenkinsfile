@@ -49,6 +49,7 @@ pipeline {
         SONAR_KEY    = "numeric-application"
         SONAR_NAME   = "numeric-application"
         K8S_MANIFEST = "k8s_deployment_service.yaml"
+        deploymentName = "devsecops"
     }
 
     stages {
@@ -156,7 +157,7 @@ pipeline {
             }
         }
     }
-    
+
     post {
         always {
             // Clean local Docker image to prevent disk space issues on Vagrant VM
