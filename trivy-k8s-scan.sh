@@ -16,7 +16,7 @@ set -o nounset
 set -o pipefail
 
 # ----------------------------- configuration -----------------------------
-TRIVY_IMAGE="${TRIVY_IMAGE:-aquasec/trivy:0.17.2}"
+TRIVY_IMAGE="${TRIVY_IMAGE:-aquasec/trivy:0.58.2}"
 
 IMAGE_TO_SCAN="${1:-${imageName:-${IMAGE_NAME:-}:${IMAGE_TAG:-}}}"
 TRIVY_REPORT="${TRIVY_REPORT:-trivy-k8s-report.json}"
