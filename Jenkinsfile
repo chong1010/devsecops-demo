@@ -54,7 +54,7 @@ pipeline {
 
         // Integration Test Variables (Updated based on kubectl get all)
         serviceName    = "devsecops-svc"
-        applicationURL = "http://192.168.1.166"
+        applicationURL = "http://192.168.49.2"
         applicationURI = "/increment/99"
     }
 
