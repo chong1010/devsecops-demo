@@ -49,6 +49,7 @@ pipeline {
         SONAR_KEY    = "numeric-application"
         SONAR_NAME   = "numeric-application"
         K8S_MANIFEST = "k8s_deployment_service.yaml"
+        TRIVY_REPORT = "trivy-k8s-report.json"
         deploymentName = "devsecops"
     }
 
@@ -69,8 +70,8 @@ pipeline {
                 always {
                     // Publish JUnit and JaCoCo coverage reports
                     junit 'target/surefire-reports/*.xml'
-                    jacoco execPattern: 'target/jacoco.exec', 
-                           classPattern: 'target/classes', 
+                    jacoco execPattern: 'target/jacoco.exec',
+                           classPattern: 'target/classes',
                            sourcePattern: 'src/main/java'
                 }
             }
@@ -139,8 +140,18 @@ pipeline {
                     },
                     'Kubesec Scan': {
                         sh 'bash kubesec-scan.sh'
+                    },
+                    'Trivy Image Scan': {
+                        // Reports LOW/MEDIUM/HIGH, fails the build on CRITICAL
+                        sh 'bash trivy-k8s-scan.sh ${IMAGE_NAME}:${IMAGE_TAG}'
                     }
                 )
+            }
+            post {
+                always {
+                    // Publish the Trivy report as a build artifact for auditing
+                    archiveArtifacts artifacts: "${TRIVY_REPORT}", allowEmptyArchive: true
+                }
             }
         }
 
