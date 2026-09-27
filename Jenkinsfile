@@ -44,13 +44,18 @@ pipeline {
 
     environment {
         // Centralized pipeline variables
-        IMAGE_NAME   = "chongchang/numeric-app"
-        IMAGE_TAG    = "${GIT_COMMIT}"
-        SONAR_KEY    = "numeric-application"
-        SONAR_NAME   = "numeric-application"
-        K8S_MANIFEST = "k8s_deployment_service.yaml"
-        TRIVY_REPORT = "trivy-k8s-report.json"
+        IMAGE_NAME     = "chongchang/numeric-app"
+        IMAGE_TAG      = "${GIT_COMMIT}"
+        SONAR_KEY      = "numeric-application"
+        SONAR_NAME     = "numeric-application"
+        K8S_MANIFEST   = "k8s_deployment_service.yaml"
+        TRIVY_REPORT   = "trivy-k8s-report.json"
         deploymentName = "devsecops"
+
+        // Integration Test Variables (Updated based on kubectl get all)
+        serviceName    = "devsecops-svc"
+        applicationURL = "http://192.168.1.166"
+        applicationURI = "/increment/99"
     }
 
     stages {
@@ -172,6 +177,14 @@ pipeline {
 
                     // Step 2: Rollout Status Check (This runs your rollout monitor script)
                     sh 'bash k8s-deployment-rollout-status.sh'
+                }
+            }
+        }
+
+        stage('Integration Tests') {
+            steps {
+                withKubeConfig([credentialsId: 'kubeconfig']) {
+                    sh 'bash integration-test.sh'
                 }
             }
         }

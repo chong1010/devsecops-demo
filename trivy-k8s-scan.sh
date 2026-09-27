@@ -16,7 +16,8 @@ set -o nounset
 set -o pipefail
 
 # ----------------------------- configuration -----------------------------
-TRIVY_IMAGE="${TRIVY_IMAGE:-aquasec/trivy:0.58.2}"
+# Updated to modern Trivy image to avoid schema v1 deprecation errors
+TRIVY_IMAGE="${TRIVY_IMAGE:-aquasec/trivy:latest}"
 
 IMAGE_TO_SCAN="${1:-${imageName:-${IMAGE_NAME:-}:${IMAGE_TAG:-}}}"
 TRIVY_REPORT="${TRIVY_REPORT:-trivy-k8s-report.json}"
@@ -53,7 +54,8 @@ run_trivy() {
         -v "${TEMP_DIR}:/tmp" \
         -e TRIVY_TEMP_DIR="/tmp" \
         "${TRIVY_IMAGE}" \
-        -q image \
+        image \
+        -q \
         --exit-code "$2" \
         --severity "$1" \
         "${IMAGE_TO_SCAN}"
@@ -93,7 +95,8 @@ case "${exit_code}" in
             -e TRIVY_TEMP_DIR="/tmp" \
             -v "${PWD}:/out" \
             "${TRIVY_IMAGE}" \
-            -q image \
+            image \
+            -q \
             --format json \
             --output "/out/${TRIVY_REPORT}" \
             "${IMAGE_TO_SCAN}" || echo "[WARN] Could not generate JSON report."
