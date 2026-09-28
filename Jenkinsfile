@@ -195,7 +195,15 @@ pipeline {
             }
             post {
                 always {
-                    archiveArtifacts artifacts: 'zap_report.html', allowEmptyArchive: true
+                    publishHTML(target: [
+                        allowMissing: false,
+                        alwaysLinkToLastBuild: true,
+                        keepAll: true,
+                        reportDir: '.',
+                        reportFiles: 'zap_report.html',
+                        reportName: 'OWASP ZAP Security Report',
+                        reportTitles: 'OWASP ZAP Report'
+                    ])
                 }
             }
         }
