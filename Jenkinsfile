@@ -188,6 +188,17 @@ pipeline {
                 }
             }
         }
+
+        stage('OWASP ZAP Scan') {
+            steps {
+                sh 'bash zap.sh'
+            }
+            post {
+                always {
+                    archiveArtifacts artifacts: 'zap_report.html', allowEmptyArchive: true[cite: 2]
+                }
+            }
+        }
     }
 
     post {
