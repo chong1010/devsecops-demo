@@ -195,7 +195,7 @@ pipeline {
             }
             post {
                 always {
-                    archiveArtifacts artifacts: 'zap_report.html', allowEmptyArchive: true[cite: 2]
+                    archiveArtifacts artifacts: 'zap_report.html', allowEmptyArchive: true
                 }
             }
         }
