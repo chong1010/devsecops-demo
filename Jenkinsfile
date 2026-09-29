@@ -34,7 +34,6 @@ pipeline {
     agent any
 
     environment {
-        // Centralized pipeline variables
         IMAGE_NAME     = "chongchang/numeric-app"
         IMAGE_TAG      = "${GIT_COMMIT}"
         SONAR_KEY      = "numeric-application"
@@ -43,7 +42,6 @@ pipeline {
         TRIVY_REPORT   = "trivy-k8s-report.json"
         deploymentName = "devsecops"
 
-        // Integration Test Variables
         serviceName    = "devsecops-svc"
         applicationURL = "http://192.168.49.2"
         applicationURI = "/increment/99"
@@ -52,20 +50,13 @@ pipeline {
     stages {
 
         // =========================================================================
-        // SAMPLE TEST STAGES FOR TESTING SLACK NOTIFICATIONS
+        // SHELL EXIT CODE TEST STAGE
         // =========================================================================
 
-        stage('Test Success Stage') {
+        stage('Shell Test Stage') {
             steps {
-                echo 'Running successful test step...'
-            }
-        }
-
-        stage('Test Failure Stage') {
-            steps {
-                echo 'Simulating pipeline failure...'
-                // Toggle this line: keep active to test FAILURE, comment out to test SUCCESS
-                error('Intentional failure to test Slack notification!')
+                // Switch between 'exit 0' (Success) and 'exit 1' (Failure)
+                sh 'exit 1'
             }
         }
 
