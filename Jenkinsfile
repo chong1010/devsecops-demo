@@ -206,19 +206,27 @@ pipeline {
     post {
         success {
             script {
+                echo "Build succeeded. Sending Slack notification..."
                 sendNotification('SUCCESS')
             }
         }
         unstable {
             script {
+                echo "Build unstable. Sending Slack notification..."
                 sendNotification('UNSTABLE')
             }
         }
         failure {
             script {
-                def failedStagesList = getFailedStages(currentBuild)
-                def failedNames = failedStagesList.collect { it.failedStageName }.join(', ')
-                env.failedStage = failedNames ?: 'Unknown Failure Stage'
+                echo "Build failed. Fetching failed stages..."
+                try {
+                    def failedStagesList = getFailedStages(currentBuild)
+                    def failedNames = failedStagesList.collect { it.failedStageName }.join(', ')
+                    env.failedStage = failedNames ?: 'Shell Test Stage'
+                } catch (Exception e) {
+                    echo "Could not fetch failed stages: ${e.message}"
+                    env.failedStage = 'Shell Test Stage'
+                }
                 sendNotification('FAILURE')
             }
         }
