@@ -5,7 +5,7 @@ import io.jenkins.blueocean.rest.impl.pipeline.FlowNodeWrapper
 import org.jenkinsci.plugins.workflow.support.steps.build.RunWrapper
 import org.jenkinsci.plugins.workflow.actions.ErrorAction
 
-// Get information about all stages, including the failure cases
+// Get information about all stages, including failure cases
 @NonCPS
 List<Map> getStageResults( RunWrapper build ) {
     def visitor = new PipelineNodeGraphVisitor( build.rawBuild )
@@ -32,6 +32,10 @@ List<Map> getFailedStages( RunWrapper build ) {
 
 pipeline {
     agent any
+
+    options {
+        buildDiscarder(logRotator(numToKeepStr: '5', artifactNumToKeepStr: '5'))
+    }
 
     environment {
         IMAGE_NAME     = "chongchang/numeric-app"
@@ -135,12 +139,17 @@ pipeline {
                     },
                     'Trivy Image Scan': {
                         sh 'bash trivy-k8s-scan.sh ${IMAGE_NAME}:${IMAGE_TAG}'
+                    },
+                    'CIS Kube-bench Scan': {
+                        withKubeConfig([credentialsId: 'kubeconfig']) {
+                            sh 'bash cis-kubelet.sh'
+                        }
                     }
                 )
             }
             post {
                 always {
-                    archiveArtifacts artifacts: "${TRIVY_REPORT}", allowEmptyArchive: true
+                    archiveArtifacts artifacts: "${TRIVY_REPORT}, kube-bench-report.json", allowEmptyArchive: true
                 }
             }
         }
