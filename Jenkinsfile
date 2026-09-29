@@ -1,24 +1,17 @@
-//@Library('slack') _
+@Library('slack') _
 
-
-/////// ******************************* Code for fectching Failed Stage Name ******************************* ///////
 import io.jenkins.blueocean.rest.impl.pipeline.PipelineNodeGraphVisitor
 import io.jenkins.blueocean.rest.impl.pipeline.FlowNodeWrapper
 import org.jenkinsci.plugins.workflow.support.steps.build.RunWrapper
 import org.jenkinsci.plugins.workflow.actions.ErrorAction
 
 // Get information about all stages, including the failure cases
-// Returns a list of maps: [[id, failedStageName, result, errors]]
 @NonCPS
 List<Map> getStageResults( RunWrapper build ) {
-
-    // Get all pipeline nodes that represent stages
     def visitor = new PipelineNodeGraphVisitor( build.rawBuild )
     def stages = visitor.pipelineNodes.findAll{ it.type == FlowNodeWrapper.NodeType.STAGE }
 
     return stages.collect{ stage ->
-
-        // Get all the errors from the stage
         def errorActions = stage.getPipelineActions( ErrorAction )
         def errors = errorActions?.collect{ it.error }.unique()
 
@@ -37,8 +30,6 @@ List<Map> getFailedStages( RunWrapper build ) {
     return getStageResults( build ).findAll{ it.result == 'FAILURE' }
 }
 
-/////// ******************************* Code for fectching Failed Stage Name ******************************* ///////
-
 pipeline {
     agent any
 
@@ -52,7 +43,7 @@ pipeline {
         TRIVY_REPORT   = "trivy-k8s-report.json"
         deploymentName = "devsecops"
 
-        // Integration Test Variables (Updated based on kubectl get all)
+        // Integration Test Variables
         serviceName    = "devsecops-svc"
         applicationURL = "http://192.168.49.2"
         applicationURI = "/increment/99"
@@ -73,7 +64,6 @@ pipeline {
             }
             post {
                 always {
-                    // Publish JUnit and JaCoCo coverage reports
                     junit 'target/surefire-reports/*.xml'
                     jacoco execPattern: 'target/jacoco.exec',
                            classPattern: 'target/classes',
@@ -99,7 +89,6 @@ pipeline {
             }
         }
 
-        // MUST BUILD IMAGE BEFORE TRIVY SCAN
         stage('Docker Build') {
             steps {
                 sh "docker build -t ${IMAGE_NAME}:${IMAGE_TAG} ."
@@ -147,20 +136,17 @@ pipeline {
                         sh 'bash kubesec-scan.sh'
                     },
                     'Trivy Image Scan': {
-                        // Reports LOW/MEDIUM/HIGH, fails the build on CRITICAL
                         sh 'bash trivy-k8s-scan.sh ${IMAGE_NAME}:${IMAGE_TAG}'
                     }
                 )
             }
             post {
                 always {
-                    // Publish the Trivy report as a build artifact for auditing
                     archiveArtifacts artifacts: "${TRIVY_REPORT}", allowEmptyArchive: true
                 }
             }
         }
 
-        // PUSH ONLY AFTER TRIVY AND DEPENDENCY SCAN PASS
         stage('Docker Push') {
             steps {
                 withDockerRegistry(credentialsId: 'docker-hub', url: '') {
@@ -172,10 +158,7 @@ pipeline {
         stage('Kubernetes Deployment - DEV') {
             steps {
                 withKubeConfig([credentialsId: 'kubeconfig']) {
-                    // Step 1: Deploy
                     sh "sed 's#replace#${IMAGE_NAME}:${IMAGE_TAG}#g' ${K8S_MANIFEST} | kubectl apply -f -"
-
-                    // Step 2: Rollout Status Check (This runs your rollout monitor script)
                     sh 'bash k8s-deployment-rollout-status.sh'
                 }
             }
@@ -210,10 +193,26 @@ pipeline {
     }
 
     post {
+        success {
+            script {
+                sendNotification('SUCCESS')
+            }
+        }
+        unstable {
+            script {
+                sendNotification('UNSTABLE')
+            }
+        }
+        failure {
+            script {
+                def failedStagesList = getFailedStages(currentBuild)
+                def failedNames = failedStagesList.collect { it.failedStageName }.join(', ')
+                env.failedStage = failedNames ?: 'Unknown Failure Stage'
+                sendNotification('FAILURE')
+            }
+        }
         always {
-            // Clean local Docker image to prevent disk space issues on Vagrant VM
             sh "docker rmi ${IMAGE_NAME}:${IMAGE_TAG} || true"
-            // Clean workspace build directory
             cleanWs()
         }
     }
