@@ -5,7 +5,7 @@ MAX_ALLOWED_FAILS=3
 
 echo "Running CIS Kube-bench Benchmark Scan..."
 
-# Quietly run kube-bench and isolate JSON output
+# Quietly run kube-bench and isolate raw output
 kubectl run kube-bench-scan --rm -i --quiet --restart=Never \
   --image=aquasec/kube-bench:latest \
   --overrides='{
@@ -29,15 +29,38 @@ kubectl run kube-bench-scan --rm -i --quiet --restart=Never \
     }
   }' > raw-output.json 2>/dev/null || true
 
-# Extract valid JSON from raw output
-sed -n '/^{/,$p' raw-output.json > kube-bench-report.json
+# Extract valid JSON starting from opening brace
+sed -n '/^{/,$p' raw-output.json > raw-bench.json
 
-# Extract total fails correctly from .Controls array
-if [ -s kube-bench-report.json ] && jq empty kube-bench-report.json 2>/dev/null; then
-    total_fail=$(jq '[.Controls[].total_fail // 0] | add' kube-bench-report.json)
-    echo "CIS Benchmark Total Failures: ${total_fail}"
-    echo "Allowed Maximum Failures: ${MAX_ALLOWED_FAILS}"
+# Filter out PASS results and construct a clean report with only FAIL and WARN
+if [ -s raw-bench.json ] && jq empty raw-bench.json 2>/dev/null; then
+    
+    # 1. Generate filtered report (FAIL & WARN only)
+    jq '
+      .Controls[] |= (
+        .tests[] |= (
+          .results |= map(select(.status == "FAIL" or .status == "WARN"))
+        ) | .tests |= map(select(.results | length > 0))
+      ) | .Controls |= map(select(.tests | length > 0))
+    ' raw-bench.json > kube-bench-report.json
 
+    # Clean up temporary raw files
+    rm -f raw-output.json raw-bench.json
+
+    # 2. Count total fails from raw/filtered JSON
+    total_fail=$(jq '[.Controls[].tests[].results[] | select(.status=="FAIL")] | length' kube-bench-report.json)
+    total_warn=$(jq '[.Controls[].tests[].results[] | select(.status=="WARN")] | length' kube-bench-report.json)
+
+    echo "--- Kube-bench Scan Summary ---"
+    echo "Critical Failures (FAIL)  : ${total_fail}"
+    echo "Non-Critical Warnings (WARN): ${total_warn}"
+    echo "Allowed Failure Threshold : ${MAX_ALLOWED_FAILS}"
+
+    # Print filtered findings cleanly in pipeline console logs
+    echo "--- Filtered Findings ---"
+    jq -r '.Controls[].tests[].results[] | "[\(.status)] \(.test_number) - \(.test_desc)"' kube-bench-report.json
+
+    # 3. Fail pipeline if critical failures exceed threshold
     if [ "$total_fail" -gt "$MAX_ALLOWED_FAILS" ]; then
         echo "ERROR: CIS Benchmark failed! Total failures (${total_fail}) exceeded allowed threshold (${MAX_ALLOWED_FAILS})."
         exit 1
@@ -46,5 +69,6 @@ if [ -s kube-bench-report.json ] && jq empty kube-bench-report.json 2>/dev/null;
         exit 0
     fi
 else
-    echo "Warning: Unable to parse valid JSON from kube-bench-report.json."
+    echo "Warning: Unable to parse valid JSON from scan output."
+    exit 1
 fi
