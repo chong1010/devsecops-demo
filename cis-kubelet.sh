@@ -1,13 +1,12 @@
 #!/bin/bash
 # cis-kubelet.sh
 
-# Set your allowed maximum failure threshold here
 MAX_ALLOWED_FAILS=3
 
 echo "Running CIS Kube-bench Benchmark Scan..."
 
-# Run kube-bench inside Minikube as a temporary pod
-kubectl run kube-bench-scan --rm -i --restart=Never \
+# Quietly run kube-bench and isolate JSON output
+kubectl run kube-bench-scan --rm -i --quiet --restart=Never \
   --image=aquasec/kube-bench:latest \
   --overrides='{
     "spec": {
@@ -28,15 +27,17 @@ kubectl run kube-bench-scan --rm -i --restart=Never \
         {"name": "etc-kubernetes", "hostPath": {"path": "/etc/kubernetes"}}
       ]
     }
-  }' > kube-bench-report.json || true
+  }' > raw-output.json 2>/dev/null || true
 
-# Extract and sum total fails from JSON report
-if [ -f kube-bench-report.json ] && grep -q "total_fail" kube-bench-report.json; then
-    total_fail=$(jq '.[].total_fail // 0' kube-bench-report.json | awk '{s+=$1} END {print s}')
+# Extract valid JSON from raw output
+sed -n '/^{/,$p' raw-output.json > kube-bench-report.json
+
+# Extract total fails correctly from .Controls array
+if [ -s kube-bench-report.json ] && jq empty kube-bench-report.json 2>/dev/null; then
+    total_fail=$(jq '[.Controls[].total_fail // 0] | add' kube-bench-report.json)
     echo "CIS Benchmark Total Failures: ${total_fail}"
     echo "Allowed Maximum Failures: ${MAX_ALLOWED_FAILS}"
 
-    # Check if failures exceed the allowed threshold
     if [ "$total_fail" -gt "$MAX_ALLOWED_FAILS" ]; then
         echo "ERROR: CIS Benchmark failed! Total failures (${total_fail}) exceeded allowed threshold (${MAX_ALLOWED_FAILS})."
         exit 1
@@ -45,5 +46,5 @@ if [ -f kube-bench-report.json ] && grep -q "total_fail" kube-bench-report.json;
         exit 0
     fi
 else
-    echo "Warning: Unable to parse kube-bench-report.json or scan output was empty."
+    echo "Warning: Unable to parse valid JSON from kube-bench-report.json."
 fi

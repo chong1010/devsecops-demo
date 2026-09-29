@@ -147,11 +147,6 @@ pipeline {
                     }
                 )
             }
-            post {
-                always {
-                    archiveArtifacts artifacts: "${TRIVY_REPORT}, kube-bench-report.json", allowEmptyArchive: true
-                }
-            }
         }
 
         stage('Docker Push') {
@@ -199,6 +194,7 @@ pipeline {
         }
     }
 
+    // --- PIPELINE-LEVEL POST BLOCK (Option 1) ---
     post {
         success {
             script {
@@ -223,6 +219,10 @@ pipeline {
             }
         }
         always {
+            // Archives Trivy and Kube-bench JSON reports at the end of the entire build
+            archiveArtifacts artifacts: "${TRIVY_REPORT}, kube-bench-report.json", allowEmptyArchive: true
+
+            // Clean workspace and remove temporary docker images
             sh "docker rmi ${IMAGE_NAME}:${IMAGE_TAG} || true"
             cleanWs()
         }
