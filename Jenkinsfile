@@ -56,7 +56,7 @@ pipeline {
         stage('Shell Test Stage') {
             steps {
                 // Switch between 'exit 0' (Success) and 'exit 1' (Failure)
-                sh 'exit 1'
+                sh 'exit 0'
             }
         }
 
