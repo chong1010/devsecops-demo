@@ -51,25 +51,6 @@ pipeline {
 
     stages {
 
-        // =========================================================================
-        // SAMPLE TEST STAGES FOR TESTING SLACK NOTIFICATIONS
-        // =========================================================================
-
-        stage('Test Success Stage') {
-            steps {
-                echo 'Running successful test step...'
-            }
-        }
-
-        stage('Test Failure Stage') {
-            steps {
-                echo 'Simulating pipeline failure...'
-                // Toggle this line: keep active to test FAILURE, comment out to test SUCCESS
-                error('Intentional failure to test Slack notification!')
-            }
-        }
-
-        /*
         stage('Build Artifact - Maven') {
             steps {
                 sh 'mvn clean package -DskipTests=true'
@@ -209,7 +190,6 @@ pipeline {
                 }
             }
         }
-        */
     }
 
     post {
@@ -232,6 +212,7 @@ pipeline {
             }
         }
         always {
+            sh "docker rmi ${IMAGE_NAME}:${IMAGE_TAG} || true"
             cleanWs()
         }
     }
