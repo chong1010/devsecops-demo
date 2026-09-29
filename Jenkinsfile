@@ -49,18 +49,6 @@ pipeline {
 
     stages {
 
-        // =========================================================================
-        // SHELL EXIT CODE TEST STAGE
-        // =========================================================================
-
-        stage('Shell Test Stage') {
-            steps {
-                // Switch between 'exit 0' (Success) and 'exit 1' (Failure)
-                sh 'exit 0'
-            }
-        }
-
-        /*
         stage('Build Artifact - Maven') {
             steps {
                 sh 'mvn clean package -DskipTests=true'
@@ -200,37 +188,33 @@ pipeline {
                 }
             }
         }
-        */
     }
 
     post {
         success {
             script {
-                echo "Build succeeded. Sending Slack notification..."
                 sendNotification('SUCCESS')
             }
         }
         unstable {
             script {
-                echo "Build unstable. Sending Slack notification..."
                 sendNotification('UNSTABLE')
             }
         }
         failure {
             script {
-                echo "Build failed. Fetching failed stages..."
                 try {
                     def failedStagesList = getFailedStages(currentBuild)
                     def failedNames = failedStagesList.collect { it.failedStageName }.join(', ')
-                    env.failedStage = failedNames ?: 'Shell Test Stage'
+                    env.failedStage = failedNames ?: 'Unknown Failure Stage'
                 } catch (Exception e) {
-                    echo "Could not fetch failed stages: ${e.message}"
-                    env.failedStage = 'Shell Test Stage'
+                    env.failedStage = 'Build Failed'
                 }
                 sendNotification('FAILURE')
             }
         }
         always {
+            sh "docker rmi ${IMAGE_NAME}:${IMAGE_TAG} || true"
             cleanWs()
         }
     }
