@@ -38,17 +38,18 @@ pipeline {
     }
 
     environment {
-        IMAGE_NAME     = "chongchang/numeric-app"
-        IMAGE_TAG      = "${GIT_COMMIT}"
-        SONAR_KEY      = "numeric-application"
-        SONAR_NAME     = "numeric-application"
-        K8S_MANIFEST   = "k8s_deployment_service.yaml"
-        TRIVY_REPORT   = "trivy-k8s-report.json"
-        deploymentName = "devsecops"
+        IMAGE_NAME        = "chongchang/numeric-app"
+        IMAGE_TAG         = "${GIT_COMMIT}"
+        SONAR_KEY         = "numeric-application"
+        SONAR_NAME        = "numeric-application"
+        K8S_MANIFEST      = "k8s_deployment_service.yaml"
+        K8S_PROD_MANIFEST = "k8s_PROD-deployment_service.yaml"
+        TRIVY_REPORT      = "trivy-k8s-report.json"
+        deploymentName    = "devsecops"
 
-        serviceName    = "devsecops-svc"
-        applicationURL = "http://192.168.49.2"
-        applicationURI = "/increment/99"
+        serviceName       = "devsecops-svc"
+        applicationURL    = "http://192.168.49.2"
+        applicationURI    = "/increment/99"
     }
 
     stages {
@@ -160,7 +161,7 @@ pipeline {
         stage('Kubernetes Deployment - DEV') {
             steps {
                 withKubeConfig([credentialsId: 'kubeconfig']) {
-                    sh "sed 's#replace#${IMAGE_NAME}:${IMAGE_TAG}#g' ${K8S_MANIFEST} | kubectl apply -f -"
+                    sh "sed 's#replace#${IMAGE_NAME}:${IMAGE_TAG}#g' ${K8S_MANIFEST} | kubectl apply -n default -f -"
                     sh 'bash k8s-deployment-rollout-status.sh'
                 }
             }
@@ -192,9 +193,18 @@ pipeline {
                 }
             }
         }
+
+        stage('Promote to PROD Environment') {
+            steps {
+                input message: 'Approve promotion to Production (prod namespace)?', ok: 'Promote'
+                withKubeConfig([credentialsId: 'kubeconfig']) {
+                    sh "sed 's#replace#${IMAGE_NAME}:${IMAGE_TAG}#g' ${K8S_PROD_MANIFEST} | kubectl apply -n prod -f -"
+                    sh 'kubectl rollout status deployment/devsecops -n prod'
+                }
+            }
+        }
     }
 
-    // --- PIPELINE-LEVEL POST BLOCK (Option 1) ---
     post {
         success {
             script {
@@ -219,10 +229,7 @@ pipeline {
             }
         }
         always {
-            // Archives Trivy and Kube-bench JSON reports at the end of the entire build
             archiveArtifacts artifacts: "${TRIVY_REPORT}, kube-bench-report.json", allowEmptyArchive: true
-
-            // Clean workspace and remove temporary docker images
             sh "docker rmi ${IMAGE_NAME}:${IMAGE_TAG} || true"
             cleanWs()
         }

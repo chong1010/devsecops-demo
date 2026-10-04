@@ -1,14 +1,22 @@
 #!/bin/bash
+# k8s-deployment-rollout-status.sh
 
-#k8s-deployment-rollout-status.sh
+# Use the environment variable if set, otherwise default to "default"
+NAMESPACE="${K8S_NAMESPACE:-default}"
+DEPLOYMENT="${deploymentName:-devsecops}"
+TIMEOUT="${ROLLOUT_TIMEOUT:-3m}"
 
-sleep 60s
+echo "Checking rollout status for deployment '${DEPLOYMENT}' in namespace '${NAMESPACE}'..."
 
-if [[ $(kubectl -n default rollout status deploy ${deploymentName} --timeout 5s) != *"successfully rolled out"* ]]; 
-then     
-	echo "Deployment ${deploymentName} Rollout has Failed"
-    kubectl -n default rollout undo deploy ${deploymentName}
-    exit 1;
+# Allow time for pods to start initializing
+sleep 10s
+
+# Monitor rollout status directly using kubectl's exit status
+if kubectl rollout status deployment/"${DEPLOYMENT}" -n "${NAMESPACE}" --timeout="${TIMEOUT}"; then
+    echo "Deployment ${DEPLOYMENT} rollout succeeded."
+    exit 0
 else
-	echo "Deployment ${deploymentName} Rollout is Success"
+    echo "Deployment ${DEPLOYMENT} rollout failed or timed out. Rolling back..."
+    kubectl rollout undo deployment/"${DEPLOYMENT}" -n "${NAMESPACE}"
+    exit 1
 fi
