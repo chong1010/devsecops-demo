@@ -1,16 +1,10 @@
 #!/bin/bash
 
-# Use Jenkins' injected KUBECONFIG if available, otherwise check standard locations
-if [ -z "$KUBECONFIG" ]; then
-    if [ -f "/home/vagrant/.kube/config" ] && [ -r "/home/vagrant/.kube/config" ]; then
-        export KUBECONFIG="/home/vagrant/.kube/config"
-    fi
-fi
-
+# Rely purely on the environment variable provided by Jenkins or kubectl defaults
 SERVICE_NAME="${serviceName:-devsecops-svc}"
 APP_URL="${applicationURL:-http://192.168.49.2}"
 
-# Query the NodePort using JSONPath directly
+# Fetch the active NodePort dynamically using current kubeconfig context
 PORT=$(kubectl -n default get svc "${SERVICE_NAME}" -o jsonpath='{.spec.ports[0].nodePort}')
 
 if [ -z "$PORT" ] || [ "$PORT" == "null" ]; then
