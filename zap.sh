@@ -1,13 +1,16 @@
 #!/bin/bash
 
-# Ensure KUBECONFIG is set for Jenkins user execution
-export KUBECONFIG=${KUBECONFIG:-/home/vagrant/.kube/config}
+# Use Jenkins' injected KUBECONFIG if available, otherwise check standard locations
+if [ -z "$KUBECONFIG" ]; then
+    if [ -f "/home/vagrant/.kube/config" ] && [ -r "/home/vagrant/.kube/config" ]; then
+        export KUBECONFIG="/home/vagrant/.kube/config"
+    fi
+fi
 
-# Hardcode or set fallbacks so script execution doesn't depend on subshell inheritance
 SERVICE_NAME="${serviceName:-devsecops-svc}"
 APP_URL="${applicationURL:-http://192.168.49.2}"
 
-# Query the NodePort using JSONPath directly (no jq needed)
+# Query the NodePort using JSONPath directly
 PORT=$(kubectl -n default get svc "${SERVICE_NAME}" -o jsonpath='{.spec.ports[0].nodePort}')
 
 if [ -z "$PORT" ] || [ "$PORT" == "null" ]; then
@@ -29,7 +32,6 @@ exit_code=$?
 
 echo "Exit Code : $exit_code"
 
-# Exit code 0 = PASS, Exit code 2 = WARN
 if [[ ${exit_code} -eq 0 ]] || [[ ${exit_code} -eq 2 ]]; then
     echo "OWASP ZAP Scan passed."
     exit 0
