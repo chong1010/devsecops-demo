@@ -2,9 +2,10 @@
 
 chmod 777 $(pwd)
 
-# Point directly to the active port-forwarded app endpoint on localhost
-docker run --rm --net=host -v "$(pwd)":/zap/wrk/:rw -t ghcr.io/zaproxy/zaproxy:weekly zap-api-scan.py \
-  -t "http://127.0.0.1:8082/v3/api-docs" \
+docker run --rm --net=host \
+  --add-host=host.docker.internal:host-gateway \
+  -v "$(pwd)":/zap/wrk/:rw -t ghcr.io/zaproxy/zaproxy:weekly zap-api-scan.py \
+  -t "http://host.docker.internal:8082/v3/api-docs" \
   -f openapi \
   -c zap_rules \
   -r zap_report.html
