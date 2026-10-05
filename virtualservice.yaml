@@ -1,0 +1,23 @@
+apiVersion: networking.istio.io/v1alpha3
+kind: VirtualService
+metadata:
+  name: devsecops-virtualservice
+  namespace: prod
+spec:
+  hosts:
+  - "*"
+  gateways:
+  - devsecops-gateway
+  http:
+  - match:
+    - uri:
+        prefix: /increment/
+    - uri:
+        prefix: /compare/
+    - uri:
+        prefix: /v3/api-docs
+    route:
+    - destination:
+        host: devsecops-svc.prod.svc.cluster.local
+        port:y
+        
