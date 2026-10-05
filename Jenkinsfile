@@ -177,7 +177,9 @@ pipeline {
 
         stage('OWASP ZAP Scan') {
             steps {
-                sh 'bash zap.sh'
+                withKubeConfig([credentialsId: 'kubeconfig']) {
+                    sh 'bash zap.sh'
+                }
             }
             post {
                 always {
