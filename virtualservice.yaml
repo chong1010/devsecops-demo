@@ -19,5 +19,5 @@ spec:
     route:
     - destination:
         host: devsecops-svc.prod.svc.cluster.local
-        port:y
+        port: 8080
         
